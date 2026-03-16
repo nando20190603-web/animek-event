@@ -953,7 +953,12 @@ window.initAdminGoogleMap = function() {
 };
 
 function updateAdminMyLocation() {
-  if (!navigator.geolocation || !adminMap) return;
+  if (!navigator.geolocation) return;
+  // adminMapがまだない場合は少し待ってリトライ
+  if (!adminMap) {
+    setTimeout(updateAdminMyLocation, 500);
+    return;
+  }
   document.getElementById('admin-map-status').textContent = '📡 現在地を取得中…';
   document.getElementById('admin-map-status').style.color = 'var(--text-dim)';
 
@@ -963,13 +968,14 @@ function updateAdminMyLocation() {
       const lng = pos.coords.longitude;
       const acc = Math.round(pos.coords.accuracy);
 
-      const iconSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22">' +
-        '<circle cx="11" cy="11" r="10" fill="#6c3fff" fill-opacity="0.2" stroke="#6c3fff" stroke-width="2"/>' +
-        '<circle cx="11" cy="11" r="5" fill="#6c3fff"/>' +
+      const iconSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24">' +
+        '<circle cx="12" cy="12" r="11" fill="#6c3fff" fill-opacity="0.2" stroke="#6c3fff" stroke-width="2.5"/>' +
+        '<circle cx="12" cy="12" r="6" fill="#6c3fff"/>' +
         '</svg>';
 
       if (adminMyMarker) {
         adminMyMarker.setPosition({ lat, lng });
+        adminMyMarker.setMap(adminMap);
       } else {
         adminMyMarker = new google.maps.Marker({
           position: { lat, lng },
@@ -977,13 +983,11 @@ function updateAdminMyLocation() {
           title: '現在地（管理者）',
           icon: {
             url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(iconSvg),
-            scaledSize: new google.maps.Size(22, 22),
-            anchor: new google.maps.Point(11, 11)
+            scaledSize: new google.maps.Size(24, 24),
+            anchor: new google.maps.Point(12, 12)
           },
           zIndex: 9999
         });
-
-        // 現在地の吹き出し
         const myInfo = new google.maps.InfoWindow({
           content: '<div style="font-family:sans-serif;padding:6px;">' +
             '<div style="font-weight:700;font-size:13px;color:#6c3fff;">📡 現在地（管理者）</div>' +
@@ -993,14 +997,18 @@ function updateAdminMyLocation() {
         adminMyMarker.addListener('click', () => myInfo.open(adminMap, adminMyMarker));
       }
 
-      document.getElementById('admin-map-status').textContent = '● ライブ表示中 （現在地 ±' + acc + 'm）';
+      // 現在地にパン（会場マーカーを中心にしたい場合はコメントアウト）
+      // adminMap.panTo({ lat, lng });
+
+      document.getElementById('admin-map-status').textContent = '● ライブ表示中　現在地 ±' + acc + 'm';
       document.getElementById('admin-map-status').style.color = '#10b981';
     },
     err => {
-      document.getElementById('admin-map-status').textContent = '● ライブ表示中（現在地取得不可）';
+      const msgs = { 1:'位置情報の許可が必要です', 2:'位置情報を取得できません', 3:'タイムアウト' };
+      document.getElementById('admin-map-status').textContent = '● ライブ表示中（' + (msgs[err.code]||'現在地取得不可') + '）';
       document.getElementById('admin-map-status').style.color = '#10b981';
     },
-    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 }
   );
 }
 
