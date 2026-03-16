@@ -929,6 +929,8 @@ function injectAdminMapsScript(key) {
   document.head.appendChild(s);
 }
 
+let adminMyMarker = null;
+
 window.initAdminGoogleMap = function() {
   const center = venues.length > 0 && venues[0].lat
     ? { lat: venues[0].lat, lng: venues[0].lng }
@@ -947,7 +949,60 @@ window.initAdminGoogleMap = function() {
   document.getElementById('admin-map-status').textContent = '● ライブ表示中';
   document.getElementById('admin-map-status').style.color = '#10b981';
   updateAdminVenueMarkers();
+  updateAdminMyLocation();
 };
+
+function updateAdminMyLocation() {
+  if (!navigator.geolocation || !adminMap) return;
+  document.getElementById('admin-map-status').textContent = '📡 現在地を取得中…';
+  document.getElementById('admin-map-status').style.color = 'var(--text-dim)';
+
+  navigator.geolocation.getCurrentPosition(
+    pos => {
+      const lat = pos.coords.latitude;
+      const lng = pos.coords.longitude;
+      const acc = Math.round(pos.coords.accuracy);
+
+      const iconSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22">' +
+        '<circle cx="11" cy="11" r="10" fill="#6c3fff" fill-opacity="0.2" stroke="#6c3fff" stroke-width="2"/>' +
+        '<circle cx="11" cy="11" r="5" fill="#6c3fff"/>' +
+        '</svg>';
+
+      if (adminMyMarker) {
+        adminMyMarker.setPosition({ lat, lng });
+      } else {
+        adminMyMarker = new google.maps.Marker({
+          position: { lat, lng },
+          map: adminMap,
+          title: '現在地（管理者）',
+          icon: {
+            url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(iconSvg),
+            scaledSize: new google.maps.Size(22, 22),
+            anchor: new google.maps.Point(11, 11)
+          },
+          zIndex: 9999
+        });
+
+        // 現在地の吹き出し
+        const myInfo = new google.maps.InfoWindow({
+          content: '<div style="font-family:sans-serif;padding:6px;">' +
+            '<div style="font-weight:700;font-size:13px;color:#6c3fff;">📡 現在地（管理者）</div>' +
+            '<div style="font-size:11px;color:#6b7280;margin-top:2px;">精度 ±' + acc + 'm</div>' +
+            '</div>'
+        });
+        adminMyMarker.addListener('click', () => myInfo.open(adminMap, adminMyMarker));
+      }
+
+      document.getElementById('admin-map-status').textContent = '● ライブ表示中 （現在地 ±' + acc + 'm）';
+      document.getElementById('admin-map-status').style.color = '#10b981';
+    },
+    err => {
+      document.getElementById('admin-map-status').textContent = '● ライブ表示中（現在地取得不可）';
+      document.getElementById('admin-map-status').style.color = '#10b981';
+    },
+    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+  );
+}
 
 function updateAdminVenueMarkers() {
   if (!adminMap) return;
@@ -1044,6 +1099,7 @@ function refreshAdminMap() {
   cosplayers = JSON.parse(localStorage.getItem('animek_cosplayers') || '[]');
   venues = JSON.parse(localStorage.getItem('animek_venues') || 'null') || venues;
   updateAdminVenueMarkers();
+  updateAdminMyLocation();
   renderVenueCards();
   updateBadges();
   showToast('🔄 マップを更新しました');
