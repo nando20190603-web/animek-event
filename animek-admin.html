@@ -997,14 +997,16 @@ function updateAdminMyLocation() {
         adminMyMarker.addListener('click', () => myInfo.open(adminMap, adminMyMarker));
       }
 
-      // 現在地にパン（会場マーカーを中心にしたい場合はコメントアウト）
-      // adminMap.panTo({ lat, lng });
+      // 現在地に移動
+      adminMap.panTo({ lat, lng });
 
+      console.log('[ANIMEK] 現在地マーカー設置:', lat, lng, '精度:', acc + 'm');
       document.getElementById('admin-map-status').textContent = '● ライブ表示中　現在地 ±' + acc + 'm';
       document.getElementById('admin-map-status').style.color = '#10b981';
     },
     err => {
       const msgs = { 1:'位置情報の許可が必要です', 2:'位置情報を取得できません', 3:'タイムアウト' };
+      console.log('[ANIMEK] 現在地取得エラー:', err.code, err.message);
       document.getElementById('admin-map-status').textContent = '● ライブ表示中（' + (msgs[err.code]||'現在地取得不可') + '）';
       document.getElementById('admin-map-status').style.color = '#10b981';
     },
