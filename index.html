@@ -6,6 +6,21 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
+<!-- キャッシュを使わずに読み込まれることを保証するための早期リダイレクト
+     古いキャッシュ（SW未登録版）が読まれた場合、?_r=タイムスタンプ付きURLへ強制移動 -->
+<script>
+(function(){
+  try{
+    // SW が制御していない かつ URLに強制リフレッシュ印がない場合 → 強制リフレッシュ
+    var controlled = ('serviceWorker' in navigator) && !!navigator.serviceWorker.controller;
+    var alreadyRefreshed = /[?&]_r=/.test(location.search);
+    if(!controlled && !alreadyRefreshed){
+      var fresh = location.pathname + '?_r=' + Date.now();
+      location.replace(fresh);
+    }
+  }catch(e){}
+})();
+</script>
 <title>ANIMEK</title>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
@@ -897,28 +912,38 @@ tr:hover td{background:#fafbff;}
 
 <script>
 // ============================================================
-// SERVICE WORKER 登録 – iOS Safari キャッシュ対策
-// SW がインストールされると以降のHTMLフェッチは常にネットワーク優先となり
-// 古いキャッシュが表示されなくなる
+// SERVICE WORKER 登録 + キャッシュ対策（Safari/iOS/Chrome 共通）
 // ============================================================
-if('serviceWorker' in navigator){
-  navigator.serviceWorker.register('/animek-event/sw.js',{scope:'/animek-event/'})
-    .then(function(reg){
-      // SW が新しいバージョンに更新されたらページをリロード
-      reg.addEventListener('updatefound',function(){
-        var sw=reg.installing;
-        sw.addEventListener('statechange',function(){
-          if(sw.state==='activated'&&navigator.serviceWorker.controller){
-            location.reload();
-          }
-        });
-      });
-    }).catch(function(){});
-  // SW が切り替わったらリロード（新バージョン即時反映）
-  navigator.serviceWorker.addEventListener('controllerchange',function(){
-    location.reload();
+(function(){
+  var _reloading = false;
+  function doReload(){
+    if(_reloading) return;
+    _reloading = true;
+    // URLから ?_r= を除いてリロード（URLを汚さない）
+    var clean = location.pathname + location.hash;
+    location.replace(clean);
+  }
+
+  if('serviceWorker' in navigator){
+    // SW登録
+    navigator.serviceWorker.register('/animek-event/sw.js', {scope: '/animek-event/'})
+      .catch(function(){});
+
+    // ① SW が制御を取得したとき（初回インストール）→ リロードで最新HTML取得
+    navigator.serviceWorker.addEventListener('controllerchange', doReload);
+
+    // ② SW から「アクティブ化完了」メッセージを受信したとき → リロード
+    navigator.serviceWorker.addEventListener('message', function(e){
+      if(e.data && e.data.type === 'SW_ACTIVATED') doReload();
+    });
+  }
+
+  // ③ bfcache 対策（Safari はブックマーク・戻るボタンで全くネット通信しない）
+  //    persisted=true のとき = bfcache から復元 → 強制リロード
+  window.addEventListener('pageshow', function(e){
+    if(e.persisted) doReload();
   });
-}
+})();
 // ============================================================
 // DATA
 // ============================================================
