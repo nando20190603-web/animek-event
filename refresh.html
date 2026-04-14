@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<title>更新中...</title>
+<style>
+body{font-family:'Noto Sans JP',sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:#f8fafc;flex-direction:column;gap:16px;}
+.spinner{width:40px;height:40px;border:4px solid #f1f5f9;border-top:4px solid #e8194b;border-radius:50%;animation:spin 0.8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+p{color:#64748b;font-size:14px;}
+</style>
+</head>
+<body>
+<div class="spinner"></div>
+<p>最新バージョンに更新しています...</p>
+<script>
+// Date.now() で毎回ユニークなURLを生成 → ブラウザキャッシュを完全回避
+location.replace('/animek-event/?_r=' + Date.now());
+</script>
+</body>
+</html>
