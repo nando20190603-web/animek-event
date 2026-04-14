@@ -978,7 +978,13 @@ function showScreen(name,el,isBottomNav){
   }
   // 画面別処理
   if(name==='home') renderHome();
-  if(name==='map'){renderVenueList(); if(googleMap) updateMyLocation();}
+  if(name==='map'){
+    renderVenueList();
+    if(googleMap){
+      google.maps.event.trigger(googleMap,'resize');
+      updateMyLocation();
+    }
+  }
   if(name==='profile') renderProfile();
   if(name==='dashboard') renderDashboard();
   if(name==='manage-cosplayers') renderCosplayerTable();
