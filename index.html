@@ -828,6 +828,25 @@ tr:hover td{background:#fafbff;}
 
 <script>
 // ============================================================
+// CACHE BUSTER – Safari / iOS キャッシュ対策
+// キャッシュから古いページが表示された場合でも、サーバー側の
+// ETag を確認して更新があれば強制リロードする
+// ============================================================
+(function(){
+  if(/[?&]_v=/.test(location.search)) return; // 既にリロード済みならスキップ
+  fetch(location.pathname,{method:'HEAD',cache:'no-store'})
+    .then(function(r){
+      var v=r.headers.get('etag')||r.headers.get('last-modified')||'';
+      var prev=localStorage.getItem('animek_page_v');
+      if(v && prev && v!==prev){
+        localStorage.setItem('animek_page_v',v);
+        location.replace(location.pathname+'?_v='+Date.now());
+      } else if(v){
+        localStorage.setItem('animek_page_v',v);
+      }
+    }).catch(function(){});
+})();
+// ============================================================
 // DATA
 // ============================================================
 const ADMIN_PW_KEY  = 'animek_admin_pw';
