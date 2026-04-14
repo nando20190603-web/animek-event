@@ -289,6 +289,9 @@ tr:hover td{background:#fafbff;}
 @keyframes modalIn{from{transform:scale(0.95);opacity:0;}to{transform:scale(1);opacity:1;}}
 .modal-title{font-family:"Poppins",sans-serif;font-size:15px;font-weight:700;margin-bottom:16px;}
 .modal-footer{display:flex;gap:9px;justify-content:flex-end;margin-top:18px;}
+.venue-picker-map{width:100%;height:220px;border-radius:10px;border:1.5px solid var(--border);margin-top:4px;background:#f1f5f9;overflow:hidden;}
+.venue-picker-coords{font-size:11px;color:var(--text-dim);margin-top:5px;text-align:center;font-family:"Poppins",sans-serif;min-height:16px;}
+.venue-picker-hint{font-size:11px;color:var(--text-dim);margin-top:3px;text-align:center;}
 
 .toast{position:fixed;bottom:80px;right:20px;background:var(--text);color:white;padding:11px 18px;border-radius:12px;font-size:13px;font-weight:600;z-index:999;opacity:0;transform:translateY(10px);transition:all 0.3s;box-shadow:var(--shadow-md);pointer-events:none;max-width:300px;}
 .toast.show{opacity:1;transform:translateY(0);}
@@ -804,9 +807,12 @@ tr:hover td{background:#fafbff;}
       <div class="form-group" style="margin-bottom:0"><label class="form-label">説明</label><input class="form-input" id="v-desc" placeholder="例: ステージ・展示エリア"></div>
       <div class="form-group" style="margin-bottom:0"><label class="form-label">定員</label><input class="form-input" type="number" id="v-capacity" value="100"></div>
     </div>
-    <div class="form-row" style="margin-top:11px;">
-      <div class="form-group" style="margin-bottom:0"><label class="form-label">緯度</label><input class="form-input" type="number" step="0.0001" id="v-lat" placeholder="例: 35.6580"></div>
-      <div class="form-group" style="margin-bottom:0"><label class="form-label">経度</label><input class="form-input" type="number" step="0.0001" id="v-lng" placeholder="例: 139.7016"></div>
+    <div style="margin-top:11px;">
+      <label class="form-label">位置（地図をタップして選択 / マーカーはドラッグ可）</label>
+      <div id="venue-picker-map" class="venue-picker-map"></div>
+      <div class="venue-picker-coords" id="venue-picker-coords">地図をタップして場所を選択してください</div>
+      <input type="hidden" id="v-lat">
+      <input type="hidden" id="v-lng">
     </div>
     <div class="modal-footer">
       <button class="btn btn-outline btn-sm" onclick="closeModal('modal-venue')">キャンセル</button>
@@ -1087,6 +1093,7 @@ function renderVenueList(){
 // MAPS
 // ============================================================
 let googleMap=null, myMarker=null, adminMap=null, adminMyMarker=null;
+let venuePickerMap=null, venuePickerMarker=null;
 let adminVenueMarkers=[];
 
 function injectMapsScript(key){
@@ -1337,14 +1344,50 @@ function openVenueModal(id){
   const v=id?venues.find(x=>x.id===id):null;
   document.getElementById('venue-modal-title').textContent=v?'会場を編集':'会場を追加';
   document.getElementById('venue-modal-btn').textContent=v?'保存':'追加';
-  document.getElementById('v-edit-id').value=id||'';;
+  document.getElementById('v-edit-id').value=id||'';
   document.getElementById('v-name').value=v?.name||'';
   document.getElementById('v-short').value=v?.short||'';
   document.getElementById('v-desc').value=v?.desc||'';
   document.getElementById('v-capacity').value=v?.capacity||100;
   document.getElementById('v-lat').value=v?.lat||'';
   document.getElementById('v-lng').value=v?.lng||'';
+  document.getElementById('venue-picker-coords').textContent=(v?.lat&&v?.lng)?v.lat.toFixed(5)+', '+v.lng.toFixed(5):'地図をタップして場所を選択してください';
+  venuePickerMap=null; venuePickerMarker=null;
   document.getElementById('modal-venue').classList.add('show');
+  setTimeout(initVenuePickerMap,120);
+}
+function initVenuePickerMap(){
+  const el=document.getElementById('venue-picker-map');
+  if(!window.google||!window.google.maps){
+    el.innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-dim);font-size:12px;padding:10px;text-align:center;">APIキーを設定すると地図で場所を選べます</div>';
+    return;
+  }
+  const lat=parseFloat(document.getElementById('v-lat').value)||null;
+  const lng=parseFloat(document.getElementById('v-lng').value)||null;
+  const center=(lat&&lng)?{lat,lng}:(venues[0]?.lat?{lat:venues[0].lat,lng:venues[0].lng}:{lat:35.658,lng:139.701});
+  venuePickerMap=new google.maps.Map(el,{center,zoom:17,disableDefaultUI:true,zoomControl:true,gestureHandling:'greedy'});
+  function setPickerCoords(p){
+    document.getElementById('v-lat').value=p.lat().toFixed(6);
+    document.getElementById('v-lng').value=p.lng().toFixed(6);
+    document.getElementById('venue-picker-coords').textContent=p.lat().toFixed(5)+', '+p.lng().toFixed(5);
+  }
+  function makeDraggable(marker){
+    marker.addListener('dragend',e=>setPickerCoords(e.latLng));
+  }
+  if(lat&&lng){
+    venuePickerMarker=new google.maps.Marker({position:{lat,lng},map:venuePickerMap,draggable:true,animation:google.maps.Animation.DROP});
+    makeDraggable(venuePickerMarker);
+  }
+  venuePickerMap.addListener('click',e=>{
+    const p=e.latLng;
+    setPickerCoords(p);
+    if(venuePickerMarker){venuePickerMarker.setPosition(p);}
+    else{
+      venuePickerMarker=new google.maps.Marker({position:p,map:venuePickerMap,draggable:true,animation:google.maps.Animation.DROP});
+      makeDraggable(venuePickerMarker);
+    }
+  });
+  google.maps.event.trigger(venuePickerMap,'resize');
 }
 function saveVenue(){
   const name=document.getElementById('v-name').value.trim();
