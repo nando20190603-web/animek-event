@@ -1433,6 +1433,7 @@ function updateAdminMyLocation(){
     const svg='data:image/svg+xml;charset=UTF-8,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"><circle cx="12" cy="12" r="11" fill="#6c3fff" fill-opacity="0.2" stroke="#6c3fff" stroke-width="2.5"/><circle cx="12" cy="12" r="6" fill="#6c3fff"/></svg>');
     if(adminMyMarker){adminMyMarker.setPosition({lat,lng});adminMyMarker.setMap(adminMap);}
     else{adminMyMarker=new google.maps.Marker({position:{lat,lng},map:adminMap,icon:{url:svg,scaledSize:new google.maps.Size(24,24),anchor:new google.maps.Point(12,12)},zIndex:9999});}
+    adminMap.panTo({lat,lng});
     document.getElementById('admin-map-status').textContent='ライブ表示中 ±'+acc+'m';
     document.getElementById('admin-map-status').style.color='#10b981';
   },()=>{},{enableHighAccuracy:true,timeout:12000,maximumAge:0});
