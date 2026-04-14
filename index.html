@@ -917,6 +917,7 @@ function doAdminLogin(){
 }
 function startApp(role){
   currentRole=role;
+  sessionStorage.setItem('animek_role',role);
   document.getElementById('login-overlay').style.display='none';
   document.getElementById('app').classList.add('show');
   // サイドバー・ナビ設定
@@ -949,6 +950,7 @@ function startApp(role){
 }
 function doLogout(){
   currentRole=null;
+  sessionStorage.removeItem('animek_role');
   document.getElementById('app').classList.remove('show');
   document.getElementById('sidebar').classList.remove('show');
   document.getElementById('main-area').classList.remove('with-sidebar');
@@ -1575,6 +1577,8 @@ function resetAllData(){
 // ============================================================
 function closeModal(id){document.getElementById(id).classList.remove('show');}
 document.querySelectorAll('.modal-overlay').forEach(m=>{m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('show');});});
+// リダイレクト後もログイン状態を維持
+(function(){const r=sessionStorage.getItem('animek_role');if(r==='admin'||r==='user')startApp(r);})();
 function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3000);}
 function refreshAll(){
   cosplayers=JSON.parse(localStorage.getItem(COSPLAYERS_KEY)||'[]');
