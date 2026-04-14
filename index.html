@@ -897,24 +897,28 @@ tr:hover td{background:#fafbff;}
 
 <script>
 // ============================================================
-// CACHE BUSTER – Safari / iOS キャッシュ対策
-// キャッシュから古いページが表示された場合でも、サーバー側の
-// ETag を確認して更新があれば強制リロードする
+// SERVICE WORKER 登録 – iOS Safari キャッシュ対策
+// SW がインストールされると以降のHTMLフェッチは常にネットワーク優先となり
+// 古いキャッシュが表示されなくなる
 // ============================================================
-(function(){
-  if(/[?&]_v=/.test(location.search)) return; // 既にリロード済みならスキップ
-  fetch(location.pathname,{method:'HEAD',cache:'no-store'})
-    .then(function(r){
-      var v=r.headers.get('etag')||r.headers.get('last-modified')||'';
-      var prev=localStorage.getItem('animek_page_v');
-      if(v && prev && v!==prev){
-        localStorage.setItem('animek_page_v',v);
-        location.replace(location.pathname+'?_v='+Date.now());
-      } else if(v){
-        localStorage.setItem('animek_page_v',v);
-      }
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('/animek-event/sw.js',{scope:'/animek-event/'})
+    .then(function(reg){
+      // SW が新しいバージョンに更新されたらページをリロード
+      reg.addEventListener('updatefound',function(){
+        var sw=reg.installing;
+        sw.addEventListener('statechange',function(){
+          if(sw.state==='activated'&&navigator.serviceWorker.controller){
+            location.reload();
+          }
+        });
+      });
     }).catch(function(){});
-})();
+  // SW が切り替わったらリロード（新バージョン即時反映）
+  navigator.serviceWorker.addEventListener('controllerchange',function(){
+    location.reload();
+  });
+}
 // ============================================================
 // DATA
 // ============================================================
